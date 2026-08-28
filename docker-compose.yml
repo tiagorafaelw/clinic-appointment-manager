@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinic-postgres
+    environment:
+      POSTGRES_DB: clinic_db
+      POSTGRES_USER: clinic_user
+      POSTGRES_PASSWORD: clinic_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - clinic_pgdata:/var/lib/postgresql/data
+
+volumes:
+  clinic_pgdata:
