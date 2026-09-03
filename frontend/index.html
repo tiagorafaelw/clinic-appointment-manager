@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clínica · Gestão de Agendamentos</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>🩺 Clínica</h1>
+      <nav>
+        <button class="nav-btn active" data-view="appointments">Agendamentos</button>
+        <button class="nav-btn" data-view="patients">Pacientes</button>
+        <button class="nav-btn" data-view="professionals">Profissionais</button>
+        <button class="nav-btn" data-view="procedures">Procedimentos</button>
+        <button class="nav-btn" data-view="calendar">Calendário</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <h2 id="view-title">Agendamentos</h2>
+        <button id="btn-new" class="btn-primary">+ Novo</button>
+      </header>
+
+      <div id="alert" class="alert hidden"></div>
+
+      <section id="view-appointments" class="view">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data/Hora</th><th>Paciente</th><th>Profissional</th>
+              <th>Procedimento</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="appointments-body"></tbody>
+        </table>
+      </section>
+
+      <section id="view-patients" class="view hidden">
+        <table class="data-table">
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Ações</th></tr></thead>
+          <tbody id="patients-body"></tbody>
+        </table>
+      </section>
+
+      <section id="view-professionals" class="view hidden">
+        <table class="data-table">
+          <thead><tr><th>Nome</th><th>Especialidade</th><th>Ações</th></tr></thead>
+          <tbody id="professionals-body"></tbody>
+        </table>
+      </section>
+
+      <section id="view-procedures" class="view hidden">
+        <table class="data-table">
+          <thead><tr><th>Nome</th><th>Duração (min)</th><th>Preço</th><th>Ativo</th><th>Ações</th></tr></thead>
+          <tbody id="procedures-body"></tbody>
+        </table>
+      </section>
+      <section id="view-calendar" class="view hidden">
+  <div class="calendar-toolbar">
+    <div class="calendar-nav">
+      <button id="cal-prev" class="btn-secondary">‹</button>
+      <button id="cal-today" class="btn-secondary">Hoje</button>
+      <button id="cal-next" class="btn-secondary">›</button>
+      <span id="cal-label" class="calendar-label"></span>
+    </div>
+    <div class="calendar-mode">
+      <button class="mode-btn active" data-mode="day">Dia</button>
+      <button class="mode-btn" data-mode="week">Semana</button>
+    </div>
+  </div>
+  <div id="calendar-grid" class="calendar-grid"></div>
+</section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <h3 id="modal-title">Novo registro</h3>
+      <form id="modal-form"></form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -7,17 +7,25 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     @Query("""
-    SELECT a FROM Appointment a
-    WHERE a.patient.phone = :phone AND a.status = 'SCHEDULED'
-    ORDER BY a.appointmentDateTime DESC
-""")
-Optional<Appointment> findLatestScheduledByPatientPhone(@Param("phone") String phone);
+        SELECT a FROM Appointment a
+        WHERE a.patient.phone = :phone AND a.status = 'SCHEDULED'
+        ORDER BY a.appointmentDateTime DESC
+    """)
+    Optional<Appointment> findLatestScheduledByPatientPhone(@Param("phone") String phone);
 
+    @Query("""
+        SELECT COUNT(a) > 0 FROM Appointment a
+        WHERE a.professional.id = :professionalId
+          AND a.status <> 'CANCELED'
+          AND a.appointmentDateTime < :end
+          AND a.endDateTime > :start
+    """)
     boolean existsOverlappingAppointment(
             @Param("professionalId") Long professionalId,
             @Param("start") LocalDateTime start,
