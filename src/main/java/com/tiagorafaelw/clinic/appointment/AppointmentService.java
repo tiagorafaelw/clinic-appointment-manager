@@ -35,26 +35,41 @@ public class AppointmentService {
     public AppointmentResponse findById(Long id) {
         return appointmentRepository.findById(id)
                 .map(AppointmentResponse::fromEntity)
-                .orElseThrow(() -> new EntityNotFoundException("Agendamento não encontrado com ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Agendamento não encontrado com ID: " + id
+                ));
     }
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest request) {
         Patient patient = patientRepository.findById(request.patientId())
-                .orElseThrow(() -> new EntityNotFoundException("Paciente não encontrado com ID: " + request.patientId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Paciente não encontrado com ID: " + request.patientId()
+                ));
 
         Professional professional = professionalRepository.findById(request.professionalId())
-                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado com ID: " + request.professionalId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Profissional não encontrado com ID: " + request.professionalId()
+                ));
 
         Procedure procedure = procedureRepository.findById(request.procedureId())
-                .orElseThrow(() -> new EntityNotFoundException("Procedimento não encontrado com ID: " + request.procedureId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Procedimento não encontrado com ID: " + request.procedureId()
+                ));
 
         LocalDateTime start = request.appointmentDateTime();
         LocalDateTime end = start.plusMinutes(procedure.getDurationMinutes());
 
-        // Regra de Ouro: Checagem de Conflito de Horário
-        if (appointmentRepository.existsOverlappingAppointment(professional.getId(), start, end)) {
-            throw new IllegalStateException("O profissional já possui um agendamento conflitante neste intervalo de horário.");
+        boolean hasConflict = appointmentRepository.existsOverlappingAppointment(
+                professional.getId(),
+                start,
+                end
+        );
+
+        if (hasConflict) {
+            throw new IllegalStateException(
+                    "O profissional já possui um agendamento conflitante neste intervalo de horário."
+            );
         }
 
         Appointment appointment = Appointment.builder()
@@ -67,15 +82,20 @@ public class AppointmentService {
                 .notes(request.notes())
                 .build();
 
-        return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+
+        return AppointmentResponse.fromEntity(savedAppointment);
     }
 
     @Transactional
     public AppointmentResponse updateStatus(Long id, AppointmentStatus newStatus) {
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Agendamento não encontrado com ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Agendamento não encontrado com ID: " + id
+                ));
 
         appointment.setStatus(newStatus);
+
         return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
     }
 }

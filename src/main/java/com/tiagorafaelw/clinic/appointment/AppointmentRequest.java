@@ -20,4 +20,5 @@ public record AppointmentRequest(
         LocalDateTime appointmentDateTime,
 
         String notes
-) {}
+) {
+}

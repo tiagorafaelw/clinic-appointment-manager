@@ -7,5 +7,5 @@ import java.util.List;
 
 @Repository
 public interface ProcedureRepository extends JpaRepository<Procedure, Long> {
-    List<Procedure> findAllByActiveTrue();
+    List<Procedure> findByActiveTrue();
 }

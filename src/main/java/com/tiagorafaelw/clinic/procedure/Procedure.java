@@ -21,22 +21,16 @@ public class Procedure {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @Column(nullable = false)
+    @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
     @Column(nullable = false)
-    private Boolean active;
-
-    @PrePersist
-    public void prePersist() {
-        if (this.active == null) {
-            this.active = true;
-        }
-    }
+    @Builder.Default
+    private Boolean active = true;
 }

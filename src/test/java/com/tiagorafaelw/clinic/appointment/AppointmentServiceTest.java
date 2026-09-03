@@ -6,20 +6,26 @@ import com.tiagorafaelw.clinic.procedure.Procedure;
 import com.tiagorafaelw.clinic.procedure.ProcedureRepository;
 import com.tiagorafaelw.clinic.professional.Professional;
 import com.tiagorafaelw.clinic.professional.ProfessionalRepository;
-import org.junit.jupiter.api.DisplayName;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AppointmentServiceTest {
@@ -39,87 +45,137 @@ class AppointmentServiceTest {
     @InjectMocks
     private AppointmentService appointmentService;
 
-    @Test
-    @DisplayName("Deve agendar com sucesso quando todos os dados forem válidos e não houver conflito")
-    void shouldCreateAppointmentSuccessfully() {
-        // Given
-        Long patientId = 1L;
-        Long professionalId = 2L;
-        Long procedureId = 3L;
-        LocalDateTime start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
+    private Patient patient;
+    private Professional professional;
+    private Procedure procedure;
+    private LocalDateTime appointmentDateTime;
 
-        Patient patient = Patient.builder().id(patientId).name("João Silva").active(true).build();
-        Professional professional = Professional.builder().id(professionalId).name("Dra. Ana").active(true).build();
-        Procedure procedure = Procedure.builder().id(procedureId).name("Consulta").durationMinutes(30).price(new BigDecimal("150.00")).active(true).build();
+    @BeforeEach
+    void setUp() {
+        appointmentDateTime = LocalDateTime.now().plusDays(1).withSecond(0).withNano(0);
 
-        AppointmentRequest request = new AppointmentRequest(patientId, professionalId, procedureId, start);
-
-        Appointment savedAppointment = Appointment.builder()
-                .id(100L)
-                .patient(patient)
-                .professional(professional)
-                .procedure(procedure)
-                .dateTime(start)
-                .status(AppointmentStatus.SCHEDULED)
+        patient = Patient.builder()
+                .id(1L)
+                .name("Tiago Rafael")
+                .phone("41999999999")
+                .email("tiago@email.com")
+                .active(true)
                 .build();
 
-        when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
-        when(professionalRepository.findById(professionalId)).thenReturn(Optional.of(professional));
-        when(procedureRepository.findById(procedureId)).thenReturn(Optional.of(procedure));
-        when(appointmentRepository.existsByProfessionalIdAndDateTime(professionalId, start)).thenReturn(false);
-        when(appointmentRepository.save(any(Appointment.class))).thenReturn(savedAppointment);
+        professional = Professional.builder()
+                .id(2L)
+                .name("Dra. Ana")
+                .specialty("Clínica Geral")
+                .active(true)
+                .build();
 
-        // When
-        AppointmentResponse response = appointmentService.create(request);
-
-        // Then
-        assertNotNull(response);
-        assertEquals(100L, response.id());
-        assertEquals(AppointmentStatus.SCHEDULED, response.status());
-        verify(appointmentRepository, times(1)).save(any(Appointment.class));
+        procedure = Procedure.builder()
+                .id(3L)
+                .name("Consulta")
+                .durationMinutes(60)
+                .active(true)
+                .build();
     }
 
     @Test
-    @DisplayName("Deve lançar exceção ao tentar agendar para profissional com horário já ocupado")
+    void shouldCreateAppointmentWhenThereIsNoScheduleConflict() {
+        AppointmentRequest request = new AppointmentRequest(
+                patient.getId(),
+                professional.getId(),
+                procedure.getId(),
+                appointmentDateTime,
+                "Paciente solicitou confirmação pelo WhatsApp."
+        );
+
+        when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
+        when(professionalRepository.findById(professional.getId())).thenReturn(Optional.of(professional));
+        when(procedureRepository.findById(procedure.getId())).thenReturn(Optional.of(procedure));
+        when(appointmentRepository.existsOverlappingAppointment(
+                eq(professional.getId()),
+                eq(appointmentDateTime),
+                eq(appointmentDateTime.plusMinutes(procedure.getDurationMinutes()))
+        )).thenReturn(false);
+
+        when(appointmentRepository.save(any(Appointment.class)))
+                .thenAnswer(invocation -> {
+                    Appointment appointment = invocation.getArgument(0);
+                    appointment.setId(10L);
+                    return appointment;
+                });
+
+        AppointmentResponse response = appointmentService.create(request);
+
+        ArgumentCaptor<Appointment> appointmentCaptor = ArgumentCaptor.forClass(Appointment.class);
+        verify(appointmentRepository).save(appointmentCaptor.capture());
+
+        Appointment savedAppointment = appointmentCaptor.getValue();
+
+        assertEquals(10L, response.id());
+        assertEquals(patient.getId(), response.patientId());
+        assertEquals(professional.getId(), response.professionalId());
+        assertEquals(procedure.getId(), response.procedureId());
+        assertEquals(appointmentDateTime, response.appointmentDateTime());
+        assertEquals(appointmentDateTime.plusMinutes(60), response.endDateTime());
+        assertEquals(AppointmentStatus.SCHEDULED, response.status());
+        assertEquals("Paciente solicitou confirmação pelo WhatsApp.", response.notes());
+
+        assertEquals(patient, savedAppointment.getPatient());
+        assertEquals(professional, savedAppointment.getProfessional());
+        assertEquals(procedure, savedAppointment.getProcedure());
+        assertEquals(appointmentDateTime, savedAppointment.getAppointmentDateTime());
+        assertEquals(appointmentDateTime.plusMinutes(60), savedAppointment.getEndDateTime());
+    }
+
+    @Test
     void shouldThrowExceptionWhenProfessionalHasScheduleConflict() {
-        // Given
-        Long patientId = 1L;
-        Long professionalId = 2L;
-        Long procedureId = 3L;
-        LocalDateTime start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
+        AppointmentRequest request = new AppointmentRequest(
+                patient.getId(),
+                professional.getId(),
+                procedure.getId(),
+                appointmentDateTime,
+                "Horário em conflito."
+        );
 
-        Patient patient = Patient.builder().id(patientId).active(true).build();
-        Professional professional = Professional.builder().id(professionalId).active(true).build();
-        Procedure procedure = Procedure.builder().id(procedureId).active(true).build();
+        when(patientRepository.findById(patient.getId())).thenReturn(Optional.of(patient));
+        when(professionalRepository.findById(professional.getId())).thenReturn(Optional.of(professional));
+        when(procedureRepository.findById(procedure.getId())).thenReturn(Optional.of(procedure));
+        when(appointmentRepository.existsOverlappingAppointment(
+                eq(professional.getId()),
+                eq(appointmentDateTime),
+                eq(appointmentDateTime.plusMinutes(procedure.getDurationMinutes()))
+        )).thenReturn(true);
 
-        AppointmentRequest request = new AppointmentRequest(patientId, professionalId, procedureId, start);
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> appointmentService.create(request)
+        );
 
-        when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
-        when(professionalRepository.findById(professionalId)).thenReturn(Optional.of(professional));
-        when(procedureRepository.findById(procedureId)).thenReturn(Optional.of(procedure));
-        when(appointmentRepository.existsByProfessionalIdAndDateTime(professionalId, start)).thenReturn(true);
+        assertTrue(exception.getMessage().contains("conflitante"));
 
-        // When & Then
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            appointmentService.create(request);
-        });
-
-        assertTrue(exception.getMessage().contains("conflito") || exception.getMessage().contains("ocupado") || exception.getMessage().contains("conflict"));
         verify(appointmentRepository, never()).save(any(Appointment.class));
     }
 
     @Test
-    @DisplayName("Deve lançar exceção quando o paciente estiver inativo ou inexistente")
-    void shouldThrowExceptionWhenPatientNotFoundOrInactive() {
-        // Given
-        Long patientId = 99L;
-        LocalDateTime start = LocalDateTime.now().plusDays(1);
-        AppointmentRequest request = new AppointmentRequest(patientId, 1L, 1L, start);
+    void shouldThrowExceptionWhenPatientDoesNotExist() {
+        AppointmentRequest request = new AppointmentRequest(
+                999L,
+                professional.getId(),
+                procedure.getId(),
+                appointmentDateTime,
+                null
+        );
 
-        when(patientRepository.findById(patientId)).thenReturn(Optional.empty());
+        when(patientRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When & Then
-        assertThrows(RuntimeException.class, () -> appointmentService.create(request));
+        EntityNotFoundException exception = assertThrows(
+                EntityNotFoundException.class,
+                () -> appointmentService.create(request)
+        );
+
+        assertTrue(exception.getMessage().contains("Paciente não encontrado"));
+
+        verify(professionalRepository, never()).findById(any());
+        verify(procedureRepository, never()).findById(any());
         verify(appointmentRepository, never()).save(any(Appointment.class));
     }
 }

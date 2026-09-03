@@ -16,12 +16,15 @@ public class ProcedureController {
     private final ProcedureService service;
 
     @GetMapping
-    public ResponseEntity<List<ProcedureResponse>> listAll() {
+    public ResponseEntity<List<ProcedureResponse>> findAll(@RequestParam(required = false) Boolean activeOnly) {
+        if (Boolean.TRUE.equals(activeOnly)) {
+            return ResponseEntity.ok(service.findAllActive());
+        }
         return ResponseEntity.ok(service.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProcedureResponse> getById(@PathVariable Long id) {
+    public ResponseEntity<ProcedureResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(service.findById(id));
     }
 
@@ -31,16 +34,13 @@ public class ProcedureController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProcedureResponse> update(
-            @PathVariable Long id,
-            @RequestBody @Valid ProcedureRequest request
-    ) {
+    public ResponseEntity<ProcedureResponse> update(@PathVariable Long id, @RequestBody @Valid ProcedureRequest request) {
         return ResponseEntity.ok(service.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
+    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
+        service.deactivate(id);
         return ResponseEntity.noContent().build();
     }
 }

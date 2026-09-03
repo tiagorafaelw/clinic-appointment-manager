@@ -15,8 +15,14 @@ public class ProcedureService {
 
     @Transactional(readOnly = true)
     public List<ProcedureResponse> findAll() {
-        return repository.findAllByActiveTrue()
-                .stream()
+        return repository.findAll().stream()
+                .map(ProcedureResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProcedureResponse> findAllActive() {
+        return repository.findByActiveTrue().stream()
                 .map(ProcedureResponse::fromEntity)
                 .toList();
     }
@@ -37,7 +43,6 @@ public class ProcedureService {
                 .durationMinutes(request.durationMinutes())
                 .active(true)
                 .build();
-
         return ProcedureResponse.fromEntity(repository.save(entity));
     }
 
@@ -55,7 +60,7 @@ public class ProcedureService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void deactivate(Long id) {
         Procedure entity = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Procedimento não encontrado com ID: " + id));
         entity.setActive(false);

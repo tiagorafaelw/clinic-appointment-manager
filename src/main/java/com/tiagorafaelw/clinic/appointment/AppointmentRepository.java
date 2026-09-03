@@ -11,14 +11,13 @@ import java.util.List;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
-    // Validação de sobreposição de horário para o mesmo profissional
     @Query("""
-        SELECT COUNT(a) > 0 FROM Appointment a
+        SELECT COUNT(a) > 0
+        FROM Appointment a
         WHERE a.professional.id = :professionalId
-          AND a.status NOT IN ('CANCELED')
-          AND (
-                (:start < a.endDateTime AND :end > a.appointmentDateTime)
-              )
+          AND a.status <> 'CANCELED'
+          AND :start < a.endDateTime
+          AND :end > a.appointmentDateTime
     """)
     boolean existsOverlappingAppointment(
             @Param("professionalId") Long professionalId,
@@ -26,7 +25,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("end") LocalDateTime end
     );
 
-    // Busca agendamentos em um intervalo (útil para rotinas de envio de WhatsApp de amanhã)
     List<Appointment> findAllByStatusAndAppointmentDateTimeBetween(
             AppointmentStatus status,
             LocalDateTime start,
