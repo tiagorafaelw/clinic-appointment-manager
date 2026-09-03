@@ -15,25 +15,24 @@ CREATE TABLE professionals (
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE services (
+CREATE TABLE procedures (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price NUMERIC(10, 2) NOT NULL,
     duration_minutes INTEGER NOT NULL,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE appointments (
     id BIGSERIAL PRIMARY KEY,
     patient_id BIGINT NOT NULL REFERENCES patients(id),
     professional_id BIGINT NOT NULL REFERENCES professionals(id),
-    service_id BIGINT NOT NULL REFERENCES services(id),
-    scheduled_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    duration_minutes INTEGER NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'SCHEDULED',
-    confirmation_sent_at TIMESTAMP WITHOUT TIME ZONE,
-    confirmed_at TIMESTAMP WITHOUT TIME ZONE,
-    notes TEXT,
+    procedure_id BIGINT NOT NULL REFERENCES procedures(id),
+    appointment_date_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    end_date_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED',
+    notes VARCHAR(255),
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -48,6 +47,6 @@ CREATE TABLE whatsapp_messages (
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_appointments_scheduled_at ON appointments(scheduled_at);
+CREATE INDEX idx_appointments_date_time ON appointments(appointment_date_time);
 CREATE INDEX idx_appointments_status ON appointments(status);
 CREATE INDEX idx_patients_phone ON patients(phone);

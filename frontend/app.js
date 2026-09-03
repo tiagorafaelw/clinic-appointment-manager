@@ -131,6 +131,10 @@ function switchView(view) {
   }
 }
 
+document.querySelectorAll('.nav-btn').forEach((btn) =>
+  btn.addEventListener('click', () => switchView(btn.dataset.view))
+);
+
 // ---------- Ações de agendamento ----------
 
 document.addEventListener('click', async (e) => {
@@ -196,9 +200,21 @@ function closeModal() {
 async function submitForm(e, entity) {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target).entries());
-  if (entity === 'appointments' && data.appointmentDateTime) {
-    data.appointmentDateTime = new Date(data.appointmentDateTime).toISOString().slice(0, 19);
+
+  if (entity === 'appointments') {
+    data.patientId = Number(data.patientId);
+    data.professionalId = Number(data.professionalId);
+    data.procedureId = Number(data.procedureId);
+    // Mantém o horário local (LocalDateTime no backend não tem timezone)
+    data.appointmentDateTime = `${data.appointmentDateTime}:00`;
+    if (!data.notes) delete data.notes;
   }
+
+  if (entity === 'procedures') {
+    data.durationMinutes = Number(data.durationMinutes);
+    data.price = Number(data.price);
+  }
+
   try {
     await apiRequest(ENDPOINTS[entity], { method: 'POST', body: data });
     showAlert('Registro criado com sucesso.', 'success');
