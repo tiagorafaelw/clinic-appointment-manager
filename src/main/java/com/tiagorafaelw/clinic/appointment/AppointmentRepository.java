@@ -12,13 +12,12 @@ import java.util.List;
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     @Query("""
-        SELECT COUNT(a) > 0
-        FROM Appointment a
-        WHERE a.professional.id = :professionalId
-          AND a.status <> 'CANCELED'
-          AND :start < a.endDateTime
-          AND :end > a.appointmentDateTime
-    """)
+    SELECT a FROM Appointment a
+    WHERE a.patient.phone = :phone AND a.status = 'SCHEDULED'
+    ORDER BY a.appointmentDateTime DESC
+""")
+Optional<Appointment> findLatestScheduledByPatientPhone(@Param("phone") String phone);
+
     boolean existsOverlappingAppointment(
             @Param("professionalId") Long professionalId,
             @Param("start") LocalDateTime start,
