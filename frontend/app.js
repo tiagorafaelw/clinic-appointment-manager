@@ -161,7 +161,7 @@ const FORMS = {
     <label>Procedimento</label>
     <select name="procedureId" required>${state.procedures.map((p) => `<option value="${p.id}">${p.name}</option>`).join('')}</select>
     <label>Data e Hora</label>
-    <input type="datetime-local" name="appointmentDateTime" required>
+    <input type="datetime-local" name="appointmentDateTime" step="300" required>
     <label>Observações</label>
     <textarea name="notes" rows="2"></textarea>`,
   patients: () => `
@@ -173,13 +173,16 @@ const FORMS = {
     <label>Especialidade</label><input name="specialty">`,
   procedures: () => `
     <label>Nome</label><input name="name" required>
-    <label>Duração (min)</label><input name="durationMinutes" type="number" required>
+    <label>Duração (min)</label><input name="durationMinutes" type="number" step="5" min="5" required>
     <label>Preço</label><input name="price" type="number" step="0.01" required>`,
 };
 
 const ENDPOINTS = { appointments: '/appointments', patients: '/patients', professionals: '/professionals', procedures: '/procedures' };
 
-$('#btn-new').addEventListener('click', () => openModal(state.view));
+$('#btn-new').addEventListener('click', () => {
+  const entity = state.view === 'calendar' ? 'appointments' : state.view;
+  openModal(entity);
+});
 
 function openModal(entity) {
   $('#modal-title').textContent = `Novo registro — ${entity}`;
