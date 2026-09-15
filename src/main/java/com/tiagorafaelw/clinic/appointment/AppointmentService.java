@@ -1,5 +1,7 @@
 package com.tiagorafaelw.clinic.appointment;
 
+import com.tiagorafaelw.clinic.notification.WhatsAppNotificationException;
+import com.tiagorafaelw.clinic.notification.WhatsAppNotificationService;
 import com.tiagorafaelw.clinic.patient.Patient;
 import com.tiagorafaelw.clinic.patient.PatientRepository;
 import com.tiagorafaelw.clinic.procedure.Procedure;
@@ -8,12 +10,14 @@ import com.tiagorafaelw.clinic.professional.Professional;
 import com.tiagorafaelw.clinic.professional.ProfessionalRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
@@ -22,6 +26,7 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final ProfessionalRepository professionalRepository;
     private final ProcedureRepository procedureRepository;
+    private final WhatsAppNotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> findAll() {
@@ -84,6 +89,8 @@ public class AppointmentService {
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
 
+        notifyPatientSafely(savedAppointment);
+
         return AppointmentResponse.fromEntity(savedAppointment);
     }
 
@@ -97,5 +104,17 @@ public class AppointmentService {
         appointment.setStatus(newStatus);
 
         return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
+    }
+
+    private void notifyPatientSafely(Appointment appointment) {
+        try {
+            notificationService.sendAppointmentConfirmation(appointment);
+        } catch (WhatsAppNotificationException exception) {
+            log.warn(
+                    "Agendamento {} criado, mas a notificação por WhatsApp falhou.",
+                    appointment.getId(),
+                    exception
+            );
+        }
     }
 }

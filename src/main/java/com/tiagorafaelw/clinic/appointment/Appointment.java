@@ -1,120 +1,64 @@
 package com.tiagorafaelw.clinic.appointment;
 
-import com.tiagorafaelw.clinic.notification.WhatsAppNotificationException;
-import com.tiagorafaelw.clinic.notification.WhatsAppNotificationService;
 import com.tiagorafaelw.clinic.patient.Patient;
-import com.tiagorafaelw.clinic.patient.PatientRepository;
 import com.tiagorafaelw.clinic.procedure.Procedure;
-import com.tiagorafaelw.clinic.procedure.ProcedureRepository;
 import com.tiagorafaelw.clinic.professional.Professional;
-import com.tiagorafaelw.clinic.professional.ProfessionalRepository;
-import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class AppointmentService {
+@Entity
+@Table(name = "appointments")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Appointment {
 
-    private final AppointmentRepository appointmentRepository;
-    private final PatientRepository patientRepository;
-    private final ProfessionalRepository professionalRepository;
-    private final ProcedureRepository procedureRepository;
-    private final WhatsAppNotificationService notificationService;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Transactional(readOnly = true)
-    public List<AppointmentResponse> findAll() {
-        return appointmentRepository.findAll()
-                .stream()
-                .map(AppointmentResponse::fromEntity)
-                .toList();
-    }
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
 
-    @Transactional(readOnly = true)
-    public AppointmentResponse findById(Long id) {
-        return appointmentRepository.findById(id)
-                .map(AppointmentResponse::fromEntity)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Agendamento não encontrado com ID: " + id
-                ));
-    }
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "professional_id", nullable = false)
+    private Professional professional;
 
-    @Transactional
-    public AppointmentResponse create(AppointmentRequest request) {
-        Patient patient = patientRepository.findById(request.patientId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Paciente não encontrado com ID: " + request.patientId()
-                ));
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "procedure_id", nullable = false)
+    private Procedure procedure;
 
-        Professional professional = professionalRepository.findById(request.professionalId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Profissional não encontrado com ID: " + request.professionalId()
-                ));
+    @Column(name = "appointment_date_time", nullable = false)
+    private LocalDateTime appointmentDateTime;
 
-        Procedure procedure = procedureRepository.findById(request.procedureId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Procedimento não encontrado com ID: " + request.procedureId()
-                ));
+    @Column(name = "end_date_time", nullable = false)
+    private LocalDateTime endDateTime;
 
-        LocalDateTime start = request.appointmentDateTime();
-        LocalDateTime end = start.plusMinutes(procedure.getDurationMinutes());
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private AppointmentStatus status;
 
-        boolean hasConflict = appointmentRepository.existsOverlappingAppointment(
-                professional.getId(),
-                start,
-                end
-        );
+    @Column(length = 500)
+    private String notes;
 
-        if (hasConflict) {
-            throw new IllegalStateException(
-                    "O profissional já possui um agendamento conflitante neste intervalo de horário."
-            );
-        }
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-        Appointment appointment = Appointment.builder()
-                .patient(patient)
-                .professional(professional)
-                .procedure(procedure)
-                .appointmentDateTime(start)
-                .endDateTime(end)
-                .status(AppointmentStatus.SCHEDULED)
-                .notes(request.notes())
-                .build();
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
 
-        Appointment savedAppointment = appointmentRepository.save(appointment);
-
-        notifyPatientSafely(savedAppointment);
-
-        return AppointmentResponse.fromEntity(savedAppointment);
-    }
-
-    @Transactional
-    public AppointmentResponse updateStatus(Long id, AppointmentStatus newStatus) {
-        Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Agendamento não encontrado com ID: " + id
-                ));
-
-        appointment.setStatus(newStatus);
-
-        return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
-    }
-
-    private void notifyPatientSafely(Appointment appointment) {
-        try {
-            notificationService.sendAppointmentConfirmation(appointment);
-        } catch (WhatsAppNotificationException exception) {
-            log.warn(
-                    "Agendamento {} criado, mas a notificação por WhatsApp falhou.",
-                    appointment.getId(),
-                    exception
-            );
+        if (this.status == null) {
+            this.status = AppointmentStatus.SCHEDULED;
         }
     }
 }
