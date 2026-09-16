@@ -1,5 +1,6 @@
 package com.tiagorafaelw.clinic.appointment;
 
+import com.tiagorafaelw.clinic.notification.WhatsAppMessageFormatter;
 import com.tiagorafaelw.clinic.notification.WhatsAppNotificationException;
 import com.tiagorafaelw.clinic.notification.WhatsAppNotificationService;
 import com.tiagorafaelw.clinic.patient.Patient;
@@ -27,6 +28,7 @@ public class AppointmentService {
     private final ProfessionalRepository professionalRepository;
     private final ProcedureRepository procedureRepository;
     private final WhatsAppNotificationService notificationService;
+    private final WhatsAppMessageFormatter messageFormatter;
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> findAll() {
@@ -106,12 +108,44 @@ public class AppointmentService {
         return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
     }
 
+    @Transactional(readOnly = true)
+    public void send24HourRemindersBetween(LocalDateTime start, LocalDateTime end) {
+        appointmentRepository
+                .findByAppointmentDateTimeBetweenAndStatus(start, end, AppointmentStatus.SCHEDULED)
+                .forEach(appointment -> sendReminderSafely(
+                        appointment,
+                        messageFormatter.buildReminder24hMessage(appointment)
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public void sendOneHourRemindersBetween(LocalDateTime start, LocalDateTime end) {
+        appointmentRepository
+                .findByAppointmentDateTimeBetweenAndStatus(start, end, AppointmentStatus.SCHEDULED)
+                .forEach(appointment -> sendReminderSafely(
+                        appointment,
+                        messageFormatter.buildReminder1hMessage(appointment)
+                ));
+    }
+
     private void notifyPatientSafely(Appointment appointment) {
         try {
             notificationService.sendAppointmentConfirmation(appointment);
         } catch (WhatsAppNotificationException exception) {
             log.warn(
                     "Agendamento {} criado, mas a notificação por WhatsApp falhou.",
+                    appointment.getId(),
+                    exception
+            );
+        }
+    }
+
+    private void sendReminderSafely(Appointment appointment, String message) {
+        try {
+            notificationService.sendMessage(appointment, message);
+        } catch (WhatsAppNotificationException exception) {
+            log.warn(
+                    "Lembrete do agendamento {} falhou ao enviar via WhatsApp.",
                     appointment.getId(),
                     exception
             );

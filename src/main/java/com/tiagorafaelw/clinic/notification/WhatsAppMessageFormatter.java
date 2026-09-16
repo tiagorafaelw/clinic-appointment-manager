@@ -22,4 +22,29 @@ public class WhatsAppMessageFormatter {
                 appointment.getAppointmentDateTime().format(DATE_TIME_FORMATTER)
         );
     }
+
+    public String buildReminder24hMessage(Appointment appointment) {
+        return """
+                Olá, %s! Passando para lembrar que você tem %s agendado com %s
+                para %s (daqui a aproximadamente 24 horas).
+                Caso precise reagendar, entre em contato com a clínica.
+                """.formatted(
+                appointment.getPatient().getName(),
+                appointment.getProcedure().getName(),
+                appointment.getProfessional().getName(),
+                appointment.getAppointmentDateTime().format(DATE_TIME_FORMATTER)
+        );
+    }
+
+    public String buildReminder1hMessage(Appointment appointment) {
+        return """
+                Olá, %s! Seu horário para %s com %s é em 1 hora, às %s.
+                Estamos te aguardando!
+                """.formatted(
+                appointment.getPatient().getName(),
+                appointment.getProcedure().getName(),
+                appointment.getProfessional().getName(),
+                appointment.getAppointmentDateTime().format(DATE_TIME_FORMATTER)
+        );
+    }
 }

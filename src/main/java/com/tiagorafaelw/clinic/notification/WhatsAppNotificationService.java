@@ -14,15 +14,24 @@ public class WhatsAppNotificationService {
     private final EvolutionApiClient evolutionApiClient;
 
     public void sendAppointmentConfirmation(Appointment appointment) {
-        String phone = appointment.getPatient().getPhone();
         String message = messageFormatter.buildConfirmationMessage(appointment);
+        sendMessage(appointment, message);
+    }
 
-        log.info(
-                "Enviando confirmação do agendamento {} para o telefone {}.",
-                appointment.getId(),
-                phone
-        );
+    public void sendMessage(Appointment appointment, String message) {
+        try {
+            String patientPhone = appointment.getPatient().getPhone();
+            evolutionApiClient.sendTextMessage(patientPhone, message);
 
-        evolutionApiClient.sendTextMessage(phone, message);
+            log.info(
+                    "Mensagem de WhatsApp enviada para o agendamento {}",
+                    appointment.getId()
+            );
+        } catch (Exception exception) {
+            throw new WhatsAppNotificationException(
+                    "Não foi possível enviar a mensagem de WhatsApp.",
+                    exception
+            );
+        }
     }
 }

@@ -1,0 +1,3 @@
+ALTER TABLE appointments
+    ADD COLUMN reminder_24h_sent_at TIMESTAMP WITHOUT TIME ZONE,
+    ADD COLUMN reminder_1h_sent_at TIMESTAMP WITHOUT TIME ZONE;
