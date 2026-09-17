@@ -9,6 +9,14 @@ import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM Appointment a
+            WHERE a.professional.id = :professionalId
+              AND a.status <> com.tiagorafaelw.clinic.appointment.AppointmentStatus.CANCELED
+              AND a.appointmentDateTime < :end
+              AND a.endDateTime > :start
+            """)
     boolean existsOverlappingAppointment(
             Long professionalId,
             LocalDateTime start,
@@ -24,7 +32,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("""
             SELECT a
             FROM Appointment a
-            WHERE a.patientPhone = :phone
+            JOIN FETCH a.patient
+            WHERE a.patient.phone = :phone
               AND a.status = com.tiagorafaelw.clinic.appointment.AppointmentStatus.SCHEDULED
             ORDER BY a.appointmentDateTime DESC
             """)

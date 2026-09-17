@@ -1,11 +1,15 @@
 package com.tiagorafaelw.clinic.appointment;
 
+import com.tiagorafaelw.clinic.notification.WhatsAppMessageFormatter;
+import com.tiagorafaelw.clinic.notification.WhatsAppNotificationService;
 import com.tiagorafaelw.clinic.patient.Patient;
 import com.tiagorafaelw.clinic.patient.PatientRepository;
 import com.tiagorafaelw.clinic.procedure.Procedure;
 import com.tiagorafaelw.clinic.procedure.ProcedureRepository;
 import com.tiagorafaelw.clinic.professional.Professional;
 import com.tiagorafaelw.clinic.professional.ProfessionalRepository;
+import com.tiagorafaelw.clinic.notification.WhatsAppMessageFormatter;
+import com.tiagorafaelw.clinic.notification.WhatsAppNotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,12 @@ class AppointmentServiceTest {
 
     @Mock
     private ProcedureRepository procedureRepository;
+
+    @Mock
+    private WhatsAppNotificationService notificationService;
+
+    @Mock
+    private WhatsAppMessageFormatter messageFormatter;
 
     @InjectMocks
     private AppointmentService appointmentService;
